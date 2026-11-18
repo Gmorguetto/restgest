@@ -1,0 +1,17 @@
+# Segredos: nunca vão para o GitHub
+.env
+
+# Banco de dados local
+instance/
+*.db
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# Sistema
+.DS_Store
+Thumbs.db
