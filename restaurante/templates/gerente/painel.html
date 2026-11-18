@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% import "_figuras.html" as f %}
+{% block classe_corpo %}atualiza-sozinho{% endblock %}
+{% block meta %}<meta http-equiv="refresh" content="60">{% endblock %}
+{% block titulo %}Painel do dia{% endblock %}
+{% block conteudo %}
+<div class="cabecalho">
+  <div>
+    <p class="sobretitulo">{{ data_hoje }} · {{ uso.restaurante_nome }}</p>
+    <h1>{{ saudacao }}, {{ primeiro_nome }}</h1>
+    <p class="subtitulo">Resumo do dia até agora.</p>
+  </div>
+  <div class="ao-vivo" title="A página se atualiza sozinha a cada minuto"><span class="ponto-vivo" aria-hidden="true"></span>Ao vivo · atualizado às {{ hora_atual }}</div>
+</div>
+
+{% if uso.dias_de_teste is not none %}
+<div class="aviso aviso-{{ 'info' if uso.dias_de_teste >= 0 else 'erro' }}">
+  {% if uso.dias_de_teste >= 0 %}Teste grátis: {{ 'falta' if uso.dias_de_teste == 1 else 'faltam' }} {{ uso.dias_de_teste|plural('dia', 'dias') }}.{% else %}O período de teste terminou.{% endif %}
+  <a href="{{ url_for('gerente.plano') }}">Ver planos</a>
+</div>
+{% endif %}
+
+{% if passos.produtos == 0 or passos.mesas == 0 or passos.equipe < 2 %}
+<section class="cartao">
+  <h2>Primeiros passos</h2>
+  <ol class="passos">
+    <li class="{{ 'feito' if passos.produtos }}"><a href="{{ url_for('gerente.cardapio') }}">Cadastre o cardápio</a>: categorias e produtos com preço.</li>
+    <li class="{{ 'feito' if passos.mesas }}"><a href="{{ url_for('gerente.mesas') }}">Cadastre as mesas</a> do salão.</li>
+    <li class="{{ 'feito' if passos.equipe >= 2 }}"><a href="{{ url_for('gerente.equipe') }}">Cadastre a equipe</a>: garçom, cozinha e caixa.</li>
+  </ol>
+</section>
+{% endif %}
+
+{# ---------- Indicadores ---------- #}
+<section class="kpis">
+  <div class="kpi kpi-heroi">
+    <div class="kpi-rotulo">{{ m.icone('moedas') }}Recebido hoje</div>
+    <div class="kpi-valor-heroi" data-contar="{{ resumo.recebido }}" data-formato="moeda" data-chave="recebido">{{ resumo.recebido|moeda }}</div>
+    <div class="kpi-detalhe">
+      {% if agora.contas_abertas %}+ {{ agora.em_aberto|moeda }} a receber em {{ agora.contas_abertas|plural('mesa aberta', 'mesas abertas') }}{% else %}Nenhuma mesa com conta aberta{% endif %}
+    </div>
+  </div>
+  <div class="kpi cartao">
+    <div class="kpi-rotulo">{{ m.icone('recibo') }}Contas fechadas</div>
+    <div class="kpi-valor" data-contar="{{ resumo.contas_fechadas }}" data-chave="contas">{{ resumo.contas_fechadas }}</div>
+    <div class="kpi-detalhe">{{ agora.contas_abertas|plural('ainda aberta', 'ainda abertas') }}</div>
+  </div>
+  <div class="kpi cartao">
+    <div class="kpi-rotulo">{{ m.icone('grafico') }}Ticket médio</div>
+    <div class="kpi-valor" data-contar="{{ resumo.ticket_medio }}" data-formato="moeda" data-chave="ticket">{{ resumo.ticket_medio|moeda }}</div>
+    <div class="kpi-detalhe">por conta fechada</div>
+  </div>
+  <div class="kpi cartao">
+    <div class="kpi-rotulo">{{ m.icone('gorjeta') }}Taxa de serviço</div>
+    <div class="kpi-valor" data-contar="{{ resumo.taxa_servico }}" data-formato="moeda" data-chave="taxa">{{ resumo.taxa_servico|moeda }}</div>
+    <div class="kpi-detalhe">{% if uso.taxa_servico %}{{ uso.taxa_servico }}% nas contas{% else %}não cobrada · <a href="{{ url_for('gerente.plano') }}">ativar em Ajustes</a>{% endif %}</div>
+  </div>
+</section>
+
+{# ---------- Vendas por hora + agora ---------- #}
+<section class="painel-linha">
+  <div class="cartao">
+    <div class="cartao-topo">
+      <div>
+        <h2>Vendas por hora</h2>
+        <p class="subtitulo">Valor recebido em cada hora de hoje</p>
+      </div>
+    </div>
+    {% if resumo.recebido %}
+    {% set maior = horas|map(attribute='valor')|max %}
+    <div class="grafico-colunas" role="img"
+         aria-label="Vendas por hora. Pico às {{ (horas|selectattr('valor', 'equalto', maior)|first).hora }}h com {{ maior|moeda }}.">
+      <div class="eixo-y" aria-hidden="true">
+        {% for marca in marcas %}<span style="bottom: {{ (marca / topo * 100)|round(2) }}%">{{ marca|moeda_curta }}</span>{% endfor %}
+      </div>
+      <div class="plot">
+        {% for marca in marcas %}<span class="linha-grade" style="bottom: {{ (marca / topo * 100)|round(2) }}%" aria-hidden="true"></span>{% endfor %}
+        <div class="colunas-grafico">
+          {% for h in horas %}
+          <div class="coluna{{ ' atual' if h.atual }}" tabindex="0"
+               data-dica="{{ h.hora }}h · {{ h.valor|moeda }} · {{ h.contas|plural('conta', 'contas') }}">
+            <span class="valor-coluna" style="height: {{ (h.valor / topo * 100)|round(2) }}%" data-ancora>
+              {% if h.valor and h.valor == maior %}<em>{{ h.valor|moeda }}</em>{% endif %}
+            </span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="eixo-x" aria-hidden="true">
+        {% for h in horas %}<span class="{{ 'atual' if h.atual }}">{{ 'agora' if h.atual else h.hora ~ 'h' }}</span>{% endfor %}
+      </div>
+    </div>
+    <details class="ver-tabela">
+      <summary>Ver em tabela</summary>
+      <table class="tabela">
+        <thead><tr><th>Hora</th><th class="num">Contas</th><th class="num">Recebido</th></tr></thead>
+        <tbody>
+        {% for h in horas if h.valor %}<tr><td>{{ h.hora }}h</td><td class="num">{{ h.contas }}</td><td class="num">{{ h.valor|moeda }}</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </details>
+    {% else %}
+    <div class="vazio-ilustrado">
+      {{ f.figura('sem-vendas') }}
+      <h3>Nenhuma venda hoje ainda</h3>
+      <p>O gráfico aparece com o primeiro pagamento registrado no caixa.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="cartao agora">
+    <h2>Agora no restaurante</h2>
+    <div class="medidor-bloco">
+      <div class="medidor-topo"><span>{{ m.icone('mesa') }}Mesas ocupadas</span><strong>{{ agora.mesas_ocupadas }} de {{ agora.mesas_total }}</strong></div>
+      <div class="medidor" role="meter" aria-label="Mesas ocupadas" aria-valuemin="0" aria-valuemax="{{ agora.mesas_total }}" aria-valuenow="{{ agora.mesas_ocupadas }}">
+        <span style="width: {{ (agora.mesas_ocupadas / agora.mesas_total * 100)|round(1) if agora.mesas_total else 0 }}%"></span>
+      </div>
+    </div>
+    <a class="cozinha-agora" href="{{ url_for('cozinha.fila') }}" aria-label="Ir para a cozinha">
+      <div><span class="ponto ponto-novo"></span><strong>{{ agora.novos }}</strong><small>novos</small></div>
+      <div><span class="ponto ponto-preparo"></span><strong>{{ agora.em_preparo }}</strong><small>em preparo</small></div>
+      <div><span class="ponto ponto-pronto"></span><strong>{{ agora.prontos }}</strong><small>prontos</small></div>
+    </a>
+    <h3 class="alertas-titulo">{{ m.icone('sino') }}Precisa de atenção</h3>
+    <ul class="alertas">
+      {% for alerta in agora.alertas[:5] %}
+      <li>
+        <a class="alerta alerta-{{ alerta.tipo }}" href="{{ url_for('cozinha.fila') if alerta.tipo == 'atrasado' else (url_for('garcom.mesas') if alerta.tipo == 'pronto' else url_for('caixa.conta', pedido_id=alerta.pedido_id)) }}">
+          {{ m.icone('alerta' if alerta.tipo == 'atrasado' else ('relogio' if alerta.tipo == 'pronto' else 'cartao')) }}
+          <span>{{ alerta.texto }}</span>
+          {% if alerta.valor %}<strong>{{ alerta.valor|moeda }}</strong>{% endif %}
+        </a>
+      </li>
+      {% else %}
+      <li><span class="alerta alerta-ok">{{ m.icone('check') }}<span>Tudo em dia: ninguém esperando.</span></span></li>
+      {% endfor %}
+    </ul>
+    {% if agora.alertas|length > 5 %}<p class="dica">E mais {{ (agora.alertas|length - 5)|plural('aviso', 'avisos') }}.</p>{% endif %}
+  </div>
+</section>
+
+{# ---------- Detalhes do dia ---------- #}
+<section class="painel-detalhes">
+  <div class="cartao cartao-garcons">
+    <h2>Vendas por garçom</h2>
+    {% if resumo.por_garcom %}
+      {% set lider = resumo.por_garcom[0] %}
+      {% set partes = lider.nome.split() %}
+      <div class="destaque-garcom">
+        <span class="avatar-destaque" aria-hidden="true">{{ partes[0][:1] }}{{ partes[-1][:1] if partes|length > 1 }}<span class="trofeu">{{ m.icone('trofeu') }}</span></span>
+        <div>
+          <span class="destaque-rotulo">Garçom que mais vendeu hoje</span>
+          <strong class="destaque-nome">{{ lider.nome }}</strong>
+          <span class="destaque-detalhe">{{ lider.vendido|moeda }} em {{ lider.contas|plural('conta', 'contas') }} · ticket médio {{ lider.ticket|moeda }}</span>
+        </div>
+      </div>
+      {% if resumo.por_garcom|length > 1 %}
+      <ol class="barras barras-ranking">
+        {% for linha in resumo.por_garcom %}
+        <li>
+          <span><b class="posicao">{{ loop.index }}</b>{{ linha.nome }} <small class="subtitulo">· {{ linha.contas|plural('conta', 'contas') }}</small></span>
+          <span class="num">{{ linha.vendido|moeda }}</span>
+          <div class="barra"><span style="width: {{ (linha.vendido / lider.vendido * 100)|round(1) if lider.vendido else 0 }}%"></span></div>
+          {% if resumo.taxa_servico %}<small class="linha-taxa">Taxa de serviço: {{ linha.taxa|moeda }}</small>{% endif %}
+        </li>
+        {% endfor %}
+      </ol>
+      {% elif resumo.taxa_servico %}
+      <p class="linha-taxa">Taxa de serviço: {{ lider.taxa|moeda }}</p>
+      {% endif %}
+      <p class="dica">Consumo das contas fechadas hoje, sem a taxa de serviço, pelo garçom que abriu a mesa.{% if not uso.taxa_servico %} Taxa de serviço: a cobrança está desligada para as próximas comandas.{% endif %}</p>
+    {% else %}
+      <p class="vazio">Nenhuma conta fechada hoje ainda. O garçom que mais vender aparece aqui.</p>
+    {% endif %}
+  </div>
+  <div class="cartao">
+    <h2>Mais vendidos hoje</h2>
+    {% if resumo.mais_vendidos %}
+      {% set maior_qtd = resumo.mais_vendidos[0].quantidade %}
+      <ol class="barras barras-ranking">
+        {% for produto in resumo.mais_vendidos %}
+        <li>
+          <span><b class="posicao">{{ loop.index }}</b>{{ produto.nome }}</span>
+          <span class="num">{{ produto.quantidade }} un · {{ produto.receita|moeda }}</span>
+          <div class="barra"><span style="width: {{ (produto.quantidade / maior_qtd * 100)|round(1) }}%"></span></div>
+        </li>
+        {% endfor %}
+      </ol>
+    {% else %}
+      <p class="vazio">Nenhuma conta fechada hoje ainda.</p>
+    {% endif %}
+  </div>
+
+  <div class="cartao">
+    <div class="titulo-com-valor"><h2>Formas de pagamento</h2></div>
+    {% if formas %}
+    <div class="barra-segmentada" role="img"
+         aria-label="{% for f in formas %}{{ f.nome }}: {{ f.valor|moeda }} ({{ (f.valor / resumo.recebido * 100)|round|int }}%){{ '; ' if not loop.last }}{% endfor %}">
+      {% for f in formas %}
+      {% set pct = f.valor / resumo.recebido * 100 %}
+      <span class="segmento forma-{{ f.forma }}" style="flex: {{ f.valor }} 1 0" tabindex="0"
+            data-dica="{{ f.nome }} · {{ f.valor|moeda }} · {{ pct|round|int }}%">{% if pct >= 14 %}{{ pct|round|int }}%{% endif %}</span>
+      {% endfor %}
+    </div>
+    <ul class="legenda">
+      {% for f in formas %}
+      <li><span class="amostra forma-{{ f.forma }}" aria-hidden="true"></span>{{ f.nome }}<strong>{{ f.valor|moeda }}</strong></li>
+      {% endfor %}
+    </ul>
+    {% else %}
+      <p class="vazio">Nenhum pagamento hoje ainda.</p>
+    {% endif %}
+  </div>
+
+</section>
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% set pedido = conta.pedido %}
+{% block titulo %}Conta da mesa {{ pedido.mesa_numero }}{% endblock %}
+{% block conteudo %}
+<div class="cabecalho">
+  <div>
+    <p class="voltar"><a href="{{ url_for('caixa.contas') }}">← Contas abertas</a></p>
+    <h1>Conta da mesa {{ pedido.mesa_numero }}</h1>
+    <p class="subtitulo">Comanda nº {{ pedido.id }} · aberta às {{ pedido.aberto_em|hora }} · garçom {{ pedido.garcom_nome }}</p>
+  </div>
+</div>
+
+<div class="grade grade-conta">
+  <section class="cartao">
+    <h2>Consumo</h2>
+    {% if conta.itens %}
+    <div class="tabela-rolagem">
+      <table class="tabela">
+        <thead><tr><th>Qtd.</th><th>Produto</th><th class="num">Unitário</th><th class="num">Subtotal</th></tr></thead>
+        <tbody>
+        {% for item in conta.itens %}
+          <tr class="{{ 'riscado' if item.status == 'cancelado' }}">
+            <td>{{ item.quantidade }}×</td>
+            <td>{{ item.produto_nome }}{% if item.status != 'entregue' %} {{ m.selo(item.status) }}{% endif %}</td>
+            <td class="num">{{ item.preco_unitario_centavos|moeda }}</td>
+            <td class="num">{{ item.subtotal_centavos|moeda }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="vazio">Nenhum item lançado.</p>
+    {% endif %}
+  </section>
+
+  <section class="cartao">
+    <h2>Pagamento</h2>
+    <dl class="resumo">
+      <dt>Consumo</dt><dd>{{ conta.consumo|moeda }}</dd>
+      {% if conta.taxa_percentual %}
+      <dt>Taxa de serviço ({{ conta.taxa_percentual }}%)</dt><dd>{{ conta.taxa|moeda }}</dd>
+      {% else %}
+      <dt>Taxa de serviço</dt><dd class="sem-taxa">não cobrada</dd>
+      {% endif %}
+      <dt class="linha-total">Total</dt><dd class="linha-total">{{ conta.total|moeda }}</dd>
+      <dt>Já pago</dt><dd>{{ conta.pago|moeda }}</dd>
+      <dt class="total">A receber</dt><dd class="total">{{ conta.restante|moeda }}</dd>
+    </dl>
+
+    {% if pedido.status == 'aberto' and conta.consumo and not conta.pago and (conta.taxa_percentual or taxa_restaurante) %}
+    <form method="post" action="{{ url_for('caixa.definir_taxa', pedido_id=pedido.id) }}" class="taxa-servico">
+      {{ m.csrf() }}
+      {% if conta.taxa_percentual %}
+        <input type="hidden" name="acao" value="retirar">
+        <span class="dica">A taxa de serviço é opcional para o cliente.</span>
+        <button type="submit" class="botao-secundario botao-pequeno">Retirar os {{ conta.taxa_percentual }}%</button>
+      {% else %}
+        <input type="hidden" name="acao" value="incluir">
+        <span class="dica">Conta sem taxa de serviço.</span>
+        <button type="submit" class="botao-secundario botao-pequeno">Incluir {{ taxa_restaurante }}% de serviço</button>
+      {% endif %}
+    </form>
+    {% endif %}
+
+    {% if conta.pagamentos %}
+    <ul class="lista-simples">
+      {% for pagamento in conta.pagamentos %}
+      <li>{{ formas_pagamento[pagamento.forma] }}: {{ pagamento.valor_centavos|moeda }} às {{ pagamento.pago_em|hora }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if pedido.status != 'aberto' %}
+      <div class="aviso aviso-ok">Conta {{ 'fechada' if pedido.status == 'fechado' else 'cancelada' }}{% if pedido.fechado_em %} às {{ pedido.fechado_em|hora }}{% endif %}.</div>
+    {% elif conta.pendentes %}
+      <div class="aviso aviso-alerta">Ainda há {{ conta.pendentes|plural('item não entregue', 'itens não entregues') }}. A conta só pode ser cobrada depois da entrega.</div>
+    {% elif conta.total == 0 %}
+      <div class="aviso aviso-info">Esta comanda não tem itens para cobrar.</div>
+    {% else %}
+    <form method="post" action="{{ url_for('caixa.registrar_pagamento', pedido_id=pedido.id) }}">
+      {{ m.csrf() }}
+      <fieldset class="opcoes">
+        <legend>Forma de pagamento</legend>
+        {% for chave, nome in formas_pagamento.items() %}
+        <label class="opcao"><input type="radio" name="forma" value="{{ chave }}"{{ ' checked' if loop.first }} required> {{ nome }}</label>
+        {% endfor %}
+      </fieldset>
+      <div class="campo">
+        <label for="valor">Valor recebido (R$)</label>
+        <input id="valor" name="valor" inputmode="decimal" value="{{ conta.restante|campo_moeda }}" required>
+      </div>
+      <p class="dica">Para dividir a conta, registre um pagamento de cada vez. Em dinheiro, o sistema calcula o troco.</p>
+      <button type="submit" class="botao-largo">Registrar pagamento</button>
+    </form>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

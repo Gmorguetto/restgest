@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% set pedido = conta.pedido %}
+{% block titulo %}Mesa {{ pedido.mesa_numero }}{% endblock %}
+{% block conteudo %}
+<div class="cabecalho">
+  <div>
+    <p class="voltar"><a href="{{ url_for('garcom.mesas') }}">← Salão</a></p>
+    <h1>Mesa {{ pedido.mesa_numero }}</h1>
+    <p class="subtitulo">Comanda nº {{ pedido.id }} · aberta às {{ pedido.aberto_em|hora }} por {{ pedido.garcom_nome }}</p>
+  </div>
+  <div class="total-destaque">
+    <span>Total{% if conta.taxa_percentual %} com {{ conta.taxa_percentual }}%{% endif %}</span>
+    <strong>{{ conta.total|moeda }}</strong>
+    {% if conta.taxa_percentual %}<small>consumo {{ conta.consumo|moeda }} + serviço {{ conta.taxa|moeda }}</small>{% endif %}
+  </div>
+</div>
+
+{% if pedido.status == 'aberto' %}
+<form class="cartao" method="post" action="{{ url_for('garcom.adicionar_item', pedido_id=pedido.id) }}">
+  {{ m.csrf() }}
+  <h2>Lançar item</h2>
+  <div class="form-linha">
+    <div class="campo campo-largo">
+      <label for="produto">Produto</label>
+      <select id="produto" name="produto_id" required>
+        <option value="">Escolha um produto…</option>
+        {% for grupo in cardapio %}
+        <optgroup label="{{ grupo.categoria.nome }}">
+          {% for produto in grupo.produtos %}<option value="{{ produto.id }}">{{ produto.nome }} · {{ produto.preco_centavos|moeda }}</option>{% endfor %}
+        </optgroup>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="campo campo-curto">
+      <label for="quantidade">Qtd.</label>
+      <input id="quantidade" name="quantidade" type="number" min="1" max="50" value="1" required>
+    </div>
+    <div class="campo">
+      <label for="observacao">Observação</label>
+      <input id="observacao" name="observacao" maxlength="120" placeholder="Ex.: sem cebola">
+    </div>
+    <button type="submit">Enviar para a cozinha</button>
+  </div>
+</form>
+{% else %}
+<div class="aviso aviso-info">Esta comanda está {{ 'fechada' if pedido.status == 'fechado' else 'cancelada' }}.</div>
+{% endif %}
+
+<section class="cartao">
+  <h2>Itens da comanda</h2>
+  {% if conta.itens %}
+  <div class="tabela-rolagem">
+    <table class="tabela">
+      <thead><tr><th>Qtd.</th><th>Produto</th><th>Situação</th><th class="num">Subtotal</th><th></th></tr></thead>
+      <tbody>
+      {% for item in conta.itens %}
+        <tr class="{{ 'riscado' if item.status == 'cancelado' }}">
+          <td>{{ item.quantidade }}×</td>
+          <td>{{ item.produto_nome }}{% if item.observacao %}<div class="obs-texto">{{ item.observacao }}</div>{% endif %}</td>
+          <td>{{ m.selo(item.status) }}</td>
+          <td class="num">{{ item.subtotal_centavos|moeda }}</td>
+          <td class="num">
+            {% if pedido.status == 'aberto' and item.status == 'pronto' %}
+              {{ m.botao_acao(url_for('garcom.entregar', item_id=item.id), 'Entregue', 'botao-ok botao-pequeno', voltar=request.path) }}
+            {% elif pedido.status == 'aberto' and item.status == 'novo' %}
+              {{ m.botao_acao(url_for('garcom.cancelar_item', item_id=item.id), 'Cancelar', 'botao-perigo botao-pequeno', voltar=request.path) }}
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="vazio">Nenhum item lançado ainda.</p>
+  {% endif %}
+</section>
+
+{% if pedido.status == 'aberto' and conta.ativos == 0 %}
+<section>
+  {{ m.botao_acao(url_for('garcom.cancelar_pedido', pedido_id=pedido.id), 'Abriu por engano? Cancelar a comanda e liberar a mesa', 'botao-perigo') }}
+</section>
+{% endif %}
+{% endblock %}

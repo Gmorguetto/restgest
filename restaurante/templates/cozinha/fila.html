@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% import "_figuras.html" as f %}
+{% block classe_corpo %}atualiza-sozinho tela-cozinha{% endblock %}
+{% block meta %}<meta http-equiv="refresh" content="15">{% endblock %}
+{% block titulo %}{% if contagem.novo %}({{ contagem.novo }}) {% endif %}Cozinha{% endblock %}
+
+{# Uma comanda: os itens de uma mesa numa mesma situação #}
+{% macro comanda(c, situacao) %}
+{% set nivel = c.minutos|urgencia(5, 10) if situacao == 'pronto' else c.minutos|urgencia %}
+<article class="comanda nivel-{{ nivel }}" aria-label="Mesa {{ c.mesa_numero }}"{% if situacao == 'novo' %} data-comanda-nova="{{ c.itens|map(attribute='id')|join('.') }}"{% endif %}>
+  <header class="comanda-topo">
+    <div>
+      <h3>Mesa {{ c.mesa_numero }}</h3>
+      <p>{{ c.garcom_nome }} · pedido às {{ c.desde|hora }}</p>
+    </div>
+    <span class="tempo" title="{{ 'Pronto há' if situacao == 'pronto' else 'Esperando há' }} {{ c.minutos }} min">
+      {{ m.icone('relogio') }}{{ c.minutos }} min
+    </span>
+  </header>
+  <ul class="comanda-itens">
+    {% for item in c.itens %}
+    <li>
+      <span class="qtd">{{ item.quantidade }}×</span>
+      <div class="item-texto">
+        <strong>{{ item.produto_nome }}</strong>
+        {% if item.observacao %}<span class="obs">{{ m.icone('alerta') }}{{ item.observacao }}</span>{% endif %}
+      </div>
+      {% if c.itens|length == 1 %}{# um item só: o botão grande da comanda basta #}
+      {% elif situacao == 'novo' %}
+        {{ m.botao_acao(url_for('cozinha.iniciar', item_id=item.id), 'Iniciar', 'botao-secundario botao-pequeno') }}
+      {% elif situacao == 'em_preparo' %}
+        {{ m.botao_acao(url_for('cozinha.pronto', item_id=item.id), 'Pronto', 'botao-secundario botao-pequeno') }}
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% if situacao == 'novo' %}
+    <footer class="comanda-acao">{{ m.botao_acao(url_for('cozinha.iniciar_comanda', pedido_id=c.pedido_id), ('Iniciar preparo de tudo (' ~ c.itens|length ~ ')') if c.itens|length > 1 else 'Iniciar preparo', 'botao-largo') }}</footer>
+  {% elif situacao == 'em_preparo' %}
+    <footer class="comanda-acao">{{ m.botao_acao(url_for('cozinha.pronto_comanda', pedido_id=c.pedido_id), ('Tudo pronto (' ~ c.itens|length ~ ')') if c.itens|length > 1 else 'Pronto', 'botao-ok botao-largo') }}</footer>
+  {% else %}
+    <footer class="comanda-aviso">Aguardando o garçom buscar</footer>
+  {% endif %}
+</article>
+{% endmacro %}
+
+{% block conteudo %}
+<div class="cabecalho cabecalho-cozinha">
+  <div>
+    <h1>Cozinha</h1>
+    <p class="subtitulo">Comandas por ordem de chegada · atualiza a cada 15 segundos</p>
+  </div>
+  <div class="cozinha-resumo">
+    <div class="resumo-item"><span class="ponto ponto-novo"></span><strong>{{ contagem.novo }}</strong> {{ 'novo' if contagem.novo == 1 else 'novos' }}</div>
+    <div class="resumo-item"><span class="ponto ponto-preparo"></span><strong>{{ contagem.em_preparo }}</strong> em preparo</div>
+    <div class="resumo-item"><span class="ponto ponto-pronto"></span><strong>{{ contagem.pronto }}</strong> {{ 'pronto' if contagem.pronto == 1 else 'prontos' }}</div>
+    {% if mais_antiga %}
+    <div class="resumo-item resumo-{{ mais_antiga.minutos|urgencia }}">{{ m.icone('relogio') }}<span>Mais antigo: <strong>Mesa {{ mais_antiga.mesa_numero }}</strong> há {{ mais_antiga.minutos }} min</span></div>
+    {% endif %}
+    <span class="relogio-cozinha" aria-label="Hora atual">{{ hora_atual }}</span>
+    <button type="button" class="botao-secundario botao-pequeno" data-tela-cheia title="Tela cheia (para a TV da cozinha)">{{ m.icone('tela-cheia') }}<span>Tela cheia</span></button>
+  </div>
+</div>
+
+{% if not (comandas.novo or comandas.em_preparo or comandas.pronto) %}
+<section class="cartao vazio-ilustrado cozinha-em-dia">
+  {{ f.figura('panela') }}
+  <h2>Cozinha em dia</h2>
+  <p>Nenhum pedido esperando. Os novos aparecem aqui sozinhos, por ordem de chegada.</p>
+</section>
+{% else %}
+<div class="quadro-cozinha">
+  {% for situacao, titulo, vazio in [('novo', 'Novos', 'Nenhum pedido novo.'), ('em_preparo', 'Em preparo', 'Nada em preparo.'), ('pronto', 'Prontos', 'Nada esperando o garçom.')] %}
+  <section class="coluna-cozinha coluna-{{ situacao }}">
+    <h2 class="coluna-titulo"><span class="ponto ponto-{{ 'novo' if situacao == 'novo' else ('preparo' if situacao == 'em_preparo' else 'pronto') }}"></span>{{ titulo }} <span class="contador">{{ comandas[situacao]|length }}</span></h2>
+    {% for c in comandas[situacao] %}
+      {{ comanda(c, situacao) }}
+    {% else %}
+      <p class="vazio">{{ vazio }}</p>
+    {% endfor %}
+  </section>
+  {% endfor %}
+</div>
+{% endif %}
+<p class="legenda-cozinha">
+  <span><span class="ponto ponto-ok"></span>até 10 min</span>
+  <span><span class="ponto ponto-atencao"></span>10 a 20 min</span>
+  <span><span class="ponto ponto-atrasado"></span>mais de 20 min (prontos: mais de 10 min esperando o garçom)</span>
+</p>
+{% endblock %}

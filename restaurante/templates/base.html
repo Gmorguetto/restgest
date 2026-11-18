@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#231c1b">
+  {% block meta %}{% endblock %}
+  <script>
+    document.documentElement.classList.add("js");
+    // Transição suave entre páginas: quando o navegador a cancela (ao recarregar, por exemplo), não é erro
+    ["pageswap", "pagereveal"].forEach(function (tipo) {
+      window.addEventListener(tipo, function (evento) {
+        var transicao = evento.viewTransition;
+        if (transicao) {
+          [transicao.ready, transicao.finished, transicao.updateCallbackDone].forEach(function (promessa) {
+            if (promessa) { promessa.catch(function () {}); }
+          });
+        }
+      });
+    });
+  </script>
+  <title>{% block titulo %}{% endblock %} · {{ nome_sistema }}</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='icone.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='estilo.css', v=versao_estatica) }}">
+  <script src="{{ url_for('static', filename='app.js', v=versao_estatica) }}" defer></script>
+</head>
+<body class="{% block classe_corpo %}{% endblock %}">
+{% import "_macros.html" as base_m %}
+{% macro link(endpoint, texto, ativo=False) -%}
+  <a href="{{ url_for(endpoint) }}"{% if ativo or request.endpoint == endpoint %} class="ativo" aria-current="page"{% endif %}>{{ texto }}</a>
+{%- endmacro %}
+<header class="topo">
+  <a class="marca" href="{{ url_for('auth.inicio') }}">
+    <span class="marca-icone">{{ base_m.icone('logo') }}</span>
+    {{ nome_sistema }}
+  </a>
+  {% if g.usuario %}
+    {% set perfil = g.usuario.perfil %}
+    <nav class="menu" aria-label="Menu principal">
+      {% if perfil == 'gerente' %}{{ link('gerente.painel', 'Painel') }}{% endif %}
+      {% if perfil in ('gerente', 'garcom') %}{{ link('garcom.mesas', 'Salão', request.blueprint == 'garcom') }}{% endif %}
+      {% if perfil in ('gerente', 'cozinha') %}{{ link('cozinha.fila', 'Cozinha') }}{% endif %}
+      {% if perfil in ('gerente', 'caixa') %}{{ link('caixa.contas', 'Caixa', request.blueprint == 'caixa') }}{% endif %}
+      {% if perfil == 'gerente' %}
+        <span class="separador" aria-hidden="true"></span>
+        {{ link('gerente.cardapio', 'Cardápio') }}
+        {{ link('gerente.mesas', 'Mesas') }}
+        {{ link('gerente.equipe', 'Equipe') }}
+        {{ link('gerente.plano', 'Ajustes') }}
+      {% endif %}
+    </nav>
+    <div class="conta">
+      {% set partes = g.usuario.nome.split() %}
+      <span class="avatar" title="{{ g.usuario.nome }} · {{ perfis[perfil] }} · {{ g.usuario.restaurante_nome }}" aria-hidden="true">{{ partes[0][:1] }}{{ partes[-1][:1] if partes|length > 1 }}</span>
+      <span class="conta-nome">{{ g.usuario.nome }} · {{ perfis[perfil] }}<small>{{ g.usuario.restaurante_nome }}</small></span>
+      <form method="post" action="{{ url_for('auth.logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="botao-sair botao-pequeno">Sair</button>
+      </form>
+    </div>
+  {% else %}
+    <nav class="menu menu-visitante">
+      <a href="{{ url_for('auth.login') }}">Entrar</a>
+      <a class="botao botao-pequeno" href="{{ url_for('auth.cadastro') }}">Teste grátis</a>
+    </nav>
+  {% endif %}
+</header>
+{% with mensagens = get_flashed_messages(with_categories=true) %}
+  {% if mensagens %}
+  <div class="avisos" aria-live="polite">
+    {% for categoria, mensagem in mensagens %}
+    <div class="aviso aviso-{{ categoria }}" role="status" data-fechavel>
+      <span>{{ mensagem }}</span>
+      <button type="button" class="fechar-aviso" aria-label="Fechar aviso">×</button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endwith %}
+<main class="conteudo">
+  {% block conteudo %}{% endblock %}
+</main>
+</body>
+</html>

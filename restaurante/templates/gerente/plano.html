@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block titulo %}Ajustes{% endblock %}
+{% block conteudo %}
+<div class="cabecalho">
+  <div>
+    <h1>Ajustes do restaurante</h1>
+    <p class="subtitulo">Taxa de serviço e plano de assinatura de {{ uso.restaurante_nome }}.</p>
+  </div>
+</div>
+
+<section class="cartao ajuste-taxa">
+  <div>
+    <h2>Taxa de serviço</h2>
+    <p class="subtitulo">Os {{ uso.taxa_servico or 10 }}% do garçom, somados ao consumo na hora de fechar a conta.
+       Vale para as comandas abertas daqui para frente. O caixa pode retirar a taxa se o cliente não quiser pagar, porque ela é opcional.</p>
+  </div>
+  <form method="post" action="{{ url_for('gerente.configurar_taxa') }}" class="form-taxa">
+    {{ m.csrf() }}
+    <label class="interruptor">
+      <input type="checkbox" name="cobrar" value="sim"{{ ' checked' if uso.taxa_servico }}>
+      Cobrar taxa de serviço
+    </label>
+    <div class="campo campo-percentual">
+      <label for="percentual">Percentual</label>
+      <div class="campo-com-sufixo">
+        <input id="percentual" name="percentual" type="number" min="1" max="20" step="1" value="{{ uso.taxa_servico or 10 }}">
+        <span>%</span>
+      </div>
+    </div>
+    <button type="submit">Salvar</button>
+  </form>
+</section>
+
+<h2 class="secao-titulo">Plano e assinatura</h2>
+<p class="subtitulo">
+  Plano atual: <strong>{{ uso.plano_nome }}</strong>
+  {% if uso.dias_de_teste is not none %}
+    · {% if uso.dias_de_teste >= 0 %}{{ 'falta' if uso.dias_de_teste == 1 else 'faltam' }} {{ uso.dias_de_teste|plural('dia', 'dias') }} de teste{% else %}teste encerrado{% endif %}
+  {% endif %}
+</p>
+
+<section class="grade grade-3">
+  <div class="cartao indicador">
+    <div class="rotulo">Mesas cadastradas</div>
+    <div class="valor">{{ uso.mesas }}<small> de {{ uso.max_mesas }}</small></div>
+  </div>
+  <div class="cartao indicador">
+    <div class="rotulo">Usuários ativos</div>
+    <div class="valor">{{ uso.usuarios }}<small> de {{ uso.max_usuarios }}</small></div>
+  </div>
+</section>
+
+<section class="grade grade-3">
+  {% for chave in ('basico', 'profissional') %}{% set plano = planos[chave] %}
+  <div class="cartao plano {{ 'atual' if uso.plano == chave }}">
+    <h2>{{ plano.nome }}</h2>
+    <p class="subtitulo">{{ plano.descricao }}</p>
+    <p class="preco">{{ plano.preco_centavos|moeda }}<small>/mês</small></p>
+    {{ m.itens_do_plano(chave, plano) }}
+    {% if uso.plano == chave %}
+      <span class="selo selo-ativo">Plano atual</span>
+    {% else %}
+      <form method="post" action="{{ url_for('gerente.mudar_plano') }}">
+        {{ m.csrf() }}
+        <input type="hidden" name="plano" value="{{ chave }}">
+        <button type="submit">Escolher {{ plano.nome }}</button>
+      </form>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {{ m.cartao_implantacao() }}
+</section>
+
+{{ m.condicoes_da_assinatura() }}
+
+<p class="aviso aviso-info">Nesta versão a troca de plano é simulada e nenhuma cobrança é feita. Em produção, a mensalidade seria cobrada todo mês por Pix, boleto ou cartão.</p>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% import "_figuras.html" as f %}
+{% block classe_corpo %}atualiza-sozinho{% endblock %}
+{% block meta %}<meta http-equiv="refresh" content="30">{% endblock %}
+{% block titulo %}Caixa{% endblock %}
+{% block conteudo %}
+<div class="cabecalho">
+  <div>
+    <h1>Caixa</h1>
+    <p class="subtitulo">Contas abertas · atualiza a cada 30 segundos</p>
+  </div>
+</div>
+
+<section class="cartao">
+  {% if contas %}
+  <div class="tabela-rolagem">
+    <table class="tabela">
+      <thead>
+        <tr><th>Mesa</th><th>Aberta às</th><th>Garçom</th><th class="num">Total</th><th class="num">A receber</th><th>Situação</th><th></th></tr>
+      </thead>
+      <tbody>
+      {% for conta in contas %}
+        {% set pronta = conta.itens and not conta.pendentes %}
+        <tr>
+          <td><strong>Mesa {{ conta.mesa_numero }}</strong></td>
+          <td>{{ conta.aberto_em|hora }}</td>
+          <td>{{ conta.garcom_nome }}</td>
+          <td class="num">{{ conta.total_centavos|moeda }}</td>
+          <td class="num">{{ (conta.total_centavos - conta.pago_centavos)|moeda }}</td>
+          <td>
+            {% if not conta.itens %}<span class="selo selo-entregue">Sem itens</span>
+            {% elif conta.pendentes %}<span class="selo selo-em_preparo">{{ conta.pendentes|plural('item', 'itens') }} a entregar</span>
+            {% else %}<span class="selo selo-pronto">Pronta para cobrar</span>{% endif %}
+          </td>
+          <td class="num"><a class="botao botao-pequeno{{ '' if pronta else ' botao-secundario' }}" href="{{ url_for('caixa.conta', pedido_id=conta.id) }}">{{ 'Cobrar' if pronta else 'Ver conta' }}</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="vazio-ilustrado">
+    {{ f.figura('caixa-vazio') }}
+    <h3>Nenhuma conta aberta no momento</h3>
+    <p>Quando o garçom abrir uma mesa, a conta aparece aqui. A página se atualiza sozinha.</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

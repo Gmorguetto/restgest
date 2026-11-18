@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% import "_figuras.html" as f %}
+{% block titulo %}Gestão de pedidos para restaurantes{% endblock %}
+{% block classe_corpo %}pagina-inicial{% endblock %}
+{% block conteudo %}
+<section class="inicio-heroi">
+  <div class="heroi-texto">
+    <span class="etiqueta-viva"><span class="ponto-vivo" aria-hidden="true"></span>14 dias grátis, sem cartão</span>
+    <h1>Pedidos, cozinha e caixa do seu restaurante <span class="texto-destaque">no mesmo lugar</span></h1>
+    <p>O garçom lança a comanda, a cozinha vê o pedido na hora e o caixa fecha a conta em segundos.
+       Funciona no navegador do computador ou do celular, sem instalar nada.</p>
+    <div class="acoes">
+      <a class="botao botao-grande botao-seta" href="{{ url_for('auth.cadastro') }}">Começar teste grátis {{ m.icone('seta') }}</a>
+      <a class="botao botao-grande botao-secundario" href="{{ url_for('auth.login') }}">Já tenho conta</a>
+    </div>
+    <ul class="heroi-pontos">
+      <li>{{ m.icone('celular') }}Funciona no celular</li>
+      <li>{{ m.icone('raio') }}Sem instalar nada</li>
+      <li>{{ m.icone('escudo') }}Dados de cada restaurante separados</li>
+    </ul>
+  </div>
+  <div class="heroi-arte">
+    {{ f.figura('heroi') }}
+    <div class="chip-flutuante chip-1" aria-hidden="true">
+      <span class="chip-icone chip-ok">{{ m.icone('check') }}</span>
+      <div><strong>Mesa 4 · pronto</strong><small>2× Suco natural</small></div>
+    </div>
+    <div class="chip-flutuante chip-2" aria-hidden="true">
+      <span class="chip-icone chip-alerta">{{ m.icone('chama') }}</span>
+      <div><strong>Moqueca em preparo</strong><small>Mesa 7 · há 12 min</small></div>
+    </div>
+    <div class="chip-flutuante chip-3" aria-hidden="true">
+      <span class="chip-icone chip-vermelho">{{ m.icone('moedas') }}</span>
+      <div><strong>+ R$ 80,19</strong><small>Mesa 5 · Pix</small></div>
+    </div>
+  </div>
+</section>
+
+<section class="inicio-secao">
+  <div class="secao-cabecalho revelar">
+    <span class="sobretitulo">Como funciona</span>
+    <h2 class="secao-titulo">Do pedido à conta, cada pessoa na sua tela</h2>
+  </div>
+  <ol class="passos-fluxo">
+    {% for icone, perfil, titulo, texto in [
+      ('prancheta', 'Garçom', 'Lança a comanda', 'Abre a mesa no celular e envia os itens com observação, como "sem açúcar".'),
+      ('chama', 'Cozinha', 'Prepara em ordem', 'Vê as comandas por mesa, com tempo de espera e cor quando atrasa.'),
+      ('cartao', 'Caixa', 'Fecha a conta', 'Recebe em dinheiro, cartão ou Pix, com troco, conta dividida e 10% opcional.'),
+      ('grafico', 'Gerente', 'Acompanha o dia', 'Vê o que vendeu, o que está na cozinha e o que precisa de atenção.'),
+    ] %}
+    <li class="passo-fluxo revelar" style="--atraso: {{ loop.index0 * 90 }}ms">
+      <span class="passo-icone">{{ m.icone(icone) }}<b>{{ loop.index }}</b></span>
+      <span class="passo-perfil">{{ perfil }}</span>
+      <h3>{{ titulo }}</h3>
+      <p>{{ texto }}</p>
+    </li>
+    {% endfor %}
+  </ol>
+</section>
+
+<section class="inicio-secao">
+  <div class="secao-cabecalho revelar">
+    <span class="sobretitulo">Recursos</span>
+    <h2 class="secao-titulo">Feito para a correria do salão</h2>
+  </div>
+  <div class="grade-recursos">
+    {% for icone, titulo, texto in [
+      ('mesa', 'Comanda por mesa', 'Itens com quantidade e observação, cancelamento antes do preparo e aviso quando fica pronto.'),
+      ('relogio', 'Cozinha sem papel', 'Quadro de comandas com tempo de espera, destaque para observações e modo tela cheia para TV.'),
+      ('gorjeta', 'Taxa de serviço', 'Os 10% entram na conta e o caixa pode retirar. O percentual é definido nos ajustes.'),
+      ('dividir', 'Conta dividida', 'Vários pagamentos na mesma conta, em formas diferentes, com cálculo de troco.'),
+      ('grafico', 'Painel do dia', 'Recebido, ticket médio, vendas por hora, formas de pagamento e mais vendidos.'),
+      ('escudo', 'Cada um no seu perfil', 'Gerente, garçom, cozinha e caixa entram com login próprio e veem só o que usam.'),
+    ] %}
+    <div class="recurso-item revelar" style="--atraso: {{ (loop.index0 % 3) * 80 }}ms">
+      <span class="recurso-icone">{{ m.icone(icone) }}</span>
+      <div><h3>{{ titulo }}</h3><p>{{ texto }}</p></div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="inicio-secao">
+  <div class="secao-cabecalho revelar">
+    <span class="sobretitulo">Planos</span>
+    <h2 class="secao-titulo">Comece grátis e escolha depois</h2>
+    <p class="secao-sub">Preços para um restaurante com uma unidade, calculados pelos custos de manter o sistema no ar.</p>
+  </div>
+  <div class="grade grade-3">
+    {% for chave in ('basico', 'profissional') %}{% set plano = planos[chave] %}
+    <div class="cartao plano revelar{{ ' recomendado' if chave == 'profissional' }}" style="--atraso: {{ loop.index0 * 90 }}ms">
+      {% if chave == 'profissional' %}<span class="plano-faixa">Mais completo</span>{% endif %}
+      <h3>{{ plano.nome }}</h3>
+      <p class="subtitulo">{{ plano.descricao }}</p>
+      <p class="preco">{{ plano.preco_centavos|moeda }}<small>/mês</small></p>
+      {{ m.itens_do_plano(chave, plano) }}
+      <a class="botao{{ '' if chave == 'profissional' else ' botao-secundario' }}" href="{{ url_for('auth.cadastro') }}">Testar grátis</a>
+    </div>
+    {% endfor %}
+    {{ m.cartao_implantacao('revelar', '--atraso: 180ms') }}
+  </div>
+  <div class="revelar">{{ m.condicoes_da_assinatura() }}</div>
+</section>
+
+<section class="faixa-final revelar">
+  <div>
+    <h2>Pronto para organizar o seu salão?</h2>
+    <p>Crie a conta, cadastre o cardápio e as mesas e chame a equipe. Leva poucos minutos.</p>
+    <a class="botao botao-grande botao-claro botao-seta" href="{{ url_for('auth.cadastro') }}">Criar meu restaurante {{ m.icone('seta') }}</a>
+  </div>
+  <div class="faixa-arte">{{ f.figura('panela') }}</div>
+</section>
+
+<footer class="rodape">
+  <span class="marca-icone">{{ m.icone('logo') }}</span>
+  <span>{{ nome_sistema }} · gestão de pedidos para restaurantes · {{ ano_atual }}</span>
+</footer>
+<p class="rodape-equipe">Desenvolvido por Gabriel Paulino Morguetto, João Victor Pinheiro Comoti, Pedro Reis Amaral Mello e Pedro Rodrigues Barros</p>
+{% endblock %}

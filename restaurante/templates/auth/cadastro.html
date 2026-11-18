@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% import "_figuras.html" as f %}
+{% block titulo %}Cadastrar restaurante{% endblock %}
+{% block conteudo %}
+<section class="tela-acesso">
+  <div class="acesso-lado">
+    {{ f.figura('cardapio-vazio') }}
+    <h2>Seu restaurante pronto em minutos</h2>
+    <p>Crie a conta, cadastre o cardápio e as mesas e chame a equipe.</p>
+    <ul class="beneficios">
+      <li>{{ m.icone('check') }} 14 dias grátis, sem cartão</li>
+      <li>{{ m.icone('check') }} Telas para gerente, garçom, cozinha e caixa</li>
+      <li>{{ m.icone('check') }} Painel com as vendas do dia</li>
+    </ul>
+  </div>
+
+  <div class="acesso-form">
+    <div>
+      <h1>Cadastre seu restaurante</h1>
+      <p class="subtitulo">Você entra como gerente e cadastra a sua equipe depois.</p>
+    </div>
+    <form method="post">
+      {{ m.csrf() }}
+      <div class="campo">
+        <label for="restaurante">Nome do restaurante</label>
+        <input id="restaurante" name="restaurante" maxlength="80" value="{{ request.form.restaurante or '' }}" required>
+      </div>
+      <div class="campo">
+        <label for="nome">Seu nome</label>
+        <input id="nome" name="nome" maxlength="80" value="{{ request.form.nome or '' }}" autocomplete="name" required>
+      </div>
+      <div class="campo">
+        <label for="email">Seu e-mail</label>
+        <input id="email" name="email" type="email" maxlength="120" value="{{ request.form.email or '' }}" autocomplete="email" required>
+      </div>
+      <div class="form-linha">
+        <div class="campo">
+          <label for="senha">Senha (mín. 6 caracteres)</label>
+          <input id="senha" name="senha" type="password" minlength="6" autocomplete="new-password" required>
+        </div>
+        <div class="campo">
+          <label for="confirmacao">Repita a senha</label>
+          <input id="confirmacao" name="confirmacao" type="password" minlength="6" autocomplete="new-password" required>
+        </div>
+      </div>
+      <button type="submit" class="botao-largo">Criar restaurante</button>
+    </form>
+    <p class="subtitulo">Já tem conta? <a href="{{ url_for('auth.login') }}">Entrar</a>.</p>
+  </div>
+</section>
+{% endblock %}

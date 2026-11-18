@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block titulo %}Equipe{% endblock %}
+{% block conteudo %}
+<div class="cabecalho">
+  <div>
+    <h1>Equipe</h1>
+    <p class="subtitulo">{{ uso.usuarios }} de {{ uso.max_usuarios }} usuários ativos no plano {{ uso.plano_nome }}. Cada perfil vê só as telas do seu trabalho.</p>
+  </div>
+</div>
+
+<form class="cartao" method="post" action="{{ url_for('gerente.novo_usuario') }}">
+  {{ m.csrf() }}
+  <h2>Novo usuário</h2>
+  <div class="form-linha">
+    <div class="campo">
+      <label for="nome">Nome</label>
+      <input id="nome" name="nome" maxlength="80" required>
+    </div>
+    <div class="campo campo-largo">
+      <label for="email">E-mail</label>
+      <input id="email" name="email" type="email" maxlength="120" required>
+    </div>
+    <div class="campo">
+      <label for="senha">Senha inicial</label>
+      <input id="senha" name="senha" type="password" minlength="6" autocomplete="new-password" required>
+    </div>
+    <div class="campo">
+      <label for="perfil">Perfil</label>
+      <select id="perfil" name="perfil">
+        {% for chave in ('garcom', 'cozinha', 'caixa', 'gerente') %}<option value="{{ chave }}">{{ perfis[chave] }}</option>{% endfor %}
+      </select>
+    </div>
+    <button type="submit">Cadastrar</button>
+  </div>
+</form>
+
+<section class="cartao">
+  <div class="tabela-rolagem">
+    <table class="tabela">
+      <thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Situação</th><th></th></tr></thead>
+      <tbody>
+      {% for usuario in usuarios %}
+        <tr class="{{ '' if usuario.ativo else 'apagado' }}">
+          <td>{{ usuario.nome }}{% if usuario.id == g.usuario.id %} <small class="subtitulo">(você)</small>{% endif %}</td>
+          <td>{{ usuario.email }}</td>
+          <td>{{ perfis[usuario.perfil] }}</td>
+          <td>{% if usuario.ativo %}<span class="selo selo-ativo">Ativo</span>{% else %}<span class="selo selo-inativo">Desativado</span>{% endif %}</td>
+          <td class="num">
+            {% if usuario.id != g.usuario.id %}
+              {{ m.botao_acao(url_for('gerente.alternar_usuario', usuario_id=usuario.id), 'Desativar' if usuario.ativo else 'Reativar', 'botao-secundario botao-pequeno') }}
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

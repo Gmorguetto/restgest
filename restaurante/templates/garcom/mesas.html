@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block classe_corpo %}atualiza-sozinho{% endblock %}
+{% block meta %}<meta http-equiv="refresh" content="20">{% endblock %}
+{% block titulo %}Salão{% endblock %}
+{% block conteudo %}
+<div class="cabecalho">
+  <div>
+    <h1>Salão</h1>
+    <p class="subtitulo">{{ livres|plural('livre', 'livres') }} · {{ ocupadas|plural('ocupada', 'ocupadas') }} · atualiza sozinho a cada 20 segundos</p>
+  </div>
+</div>
+
+{% if prontos %}
+<section class="cartao destaque-pronto">
+  <h2>Prontos para entregar <span class="contador">{{ prontos|length }}</span></h2>
+  <ul class="lista-acoes">
+    {% for item in prontos %}
+    <li>
+      <span><strong>Mesa {{ item.mesa_numero }}</strong> · {{ item.quantidade }}× {{ item.produto_nome }}
+        {% if item.observacao %}<span class="obs-texto">({{ item.observacao }})</span>{% endif %}</span>
+      {{ m.botao_acao(url_for('garcom.entregar', item_id=item.id), 'Entregue', 'botao-ok botao-pequeno', voltar=url_for('garcom.mesas')) }}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<section class="mesas">
+  {% for mesa in mesas %}
+    {% if mesa.pedido_id %}
+    <a class="mesa ocupada" href="{{ url_for('garcom.pedido', pedido_id=mesa.pedido_id) }}">
+      {{ m.icone('mesa', 'icone mesa-icone') }}
+      <span class="numero">Mesa {{ mesa.numero }}</span>
+      <span class="selo selo-ocupada">Ocupada</span>
+      <span class="desde">desde {{ mesa.aberto_em|hora }}</span>
+      <span class="valor-mesa">{{ mesa.total_centavos|moeda }}</span>
+      {% if mesa.prontos %}<span class="selo selo-pronto">{{ mesa.prontos|plural('pronto', 'prontos') }}</span>{% endif %}
+      <span class="acao">Ver comanda →</span>
+    </a>
+    {% else %}
+    <div class="mesa livre">
+      {{ m.icone('mesa', 'icone mesa-icone') }}
+      <span class="numero">Mesa {{ mesa.numero }}</span>
+      <span class="selo selo-livre">Livre</span>
+      <div class="acao">{{ m.botao_acao(url_for('garcom.abrir', mesa_id=mesa.id), 'Abrir comanda', 'botao-secundario botao-pequeno botao-largo botao-abrir') }}</div>
+    </div>
+    {% endif %}
+  {% else %}
+    <p class="vazio">Nenhuma mesa cadastrada. O gerente cadastra as mesas no menu Mesas.</p>
+  {% endfor %}
+</section>
+{% endblock %}

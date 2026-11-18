@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% import "_figuras.html" as f %}
+{% block titulo %}Entrar{% endblock %}
+{% block conteudo %}
+<section class="tela-acesso">
+  <div class="acesso-lado">
+    {{ f.figura('heroi') }}
+    <h2>Bom serviço começa aqui</h2>
+    <p>Cada pessoa da equipe entra com o seu perfil e vê só as telas do seu trabalho.</p>
+    <ul class="beneficios">
+      <li>{{ m.icone('check') }} Comanda digital por mesa</li>
+      <li>{{ m.icone('check') }} Cozinha com as comandas de cada mesa</li>
+      <li>{{ m.icone('check') }} Conta fechada em dinheiro, cartão ou Pix</li>
+    </ul>
+  </div>
+
+  <div class="acesso-form">
+    <div>
+      <h1>Entrar</h1>
+      <p class="subtitulo">Use o e-mail e a senha que o gerente cadastrou para você.</p>
+    </div>
+    <form method="post">
+      {{ m.csrf() }}
+      <div class="campo">
+        <label for="email">E-mail</label>
+        <input id="email" name="email" type="email" value="{{ request.form.email or '' }}" autocomplete="username" required autofocus>
+      </div>
+      <div class="campo">
+        <label for="senha">Senha</label>
+        <input id="senha" name="senha" type="password" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="botao-largo">Entrar</button>
+    </form>
+    <p class="subtitulo">Restaurante novo? <a href="{{ url_for('auth.cadastro') }}">Comece o teste grátis</a>.</p>
+
+    {% if usuarios_demo %}
+    <div class="aviso aviso-info demo">
+      <strong>Demonstração.</strong> Escolha um perfil para preencher o e-mail. A senha é a definida em <code>SENHA_DEMO</code> no arquivo <code>.env</code>.
+      {% for restaurante, usuarios in usuarios_demo.items() %}
+      {% set perfis_do_grupo = usuarios|map(attribute='perfil')|list %}
+      <div class="demo-grupo">
+        <span>{{ restaurante }}</span>
+        <div class="demo-botoes">
+          {% for u in usuarios %}<button type="button" class="botao-secundario botao-pequeno" data-email="{{ u.email }}" title="{{ u.email }}">{{ perfis[u.perfil] }}{% if perfis_do_grupo.count(u.perfil) > 1 %} · {{ u.nome.split()[0] }}{% endif %}</button>{% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <script>
+      document.querySelectorAll("[data-email]").forEach(function (botao) {
+        botao.addEventListener("click", function () {
+          document.getElementById("email").value = botao.dataset.email;
+          document.getElementById("senha").focus();
+        });
+      });
+    </script>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

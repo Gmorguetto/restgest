@@ -1,0 +1,91 @@
+{# Pedaços de HTML reutilizados em várias telas #}
+
+{% macro csrf() -%}
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+{%- endmacro %}
+
+{% macro selo(status) -%}
+<span class="selo selo-{{ status }}">{{ status_item[status] }}</span>
+{%- endmacro %}
+
+{# Botão que envia um formulário POST (ações que mudam dados nunca usam links) #}
+{% macro botao_acao(url, texto, classe="", voltar=None) -%}
+<form method="post" action="{{ url }}" class="form-acao">
+  {{ csrf() }}
+  {% if voltar %}<input type="hidden" name="voltar" value="{{ voltar }}">{% endif %}
+  <button type="submit" class="{{ classe }}">{{ texto }}</button>
+</form>
+{%- endmacro %}
+
+{# Ícones de traço simples desenhados para o sistema (24 x 24) #}
+{% macro icone(nome, classe="icone") -%}
+<svg class="{{ classe }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  {%- if nome == 'logo' %}<path d="M3 18h18"/><path d="M5 18a7 7 0 0 1 14 0"/><path d="M12 9V7"/><path d="M10 7h4"/>
+  {%- elif nome == 'grafico' %}<path d="M4 20V11"/><path d="M10 20V5"/><path d="M16 20v-6"/><path d="M21 20H3"/>
+  {%- elif nome == 'prancheta' %}<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3h6v3H9z"/><path d="M9 11h6"/><path d="M9 15h4"/>
+  {%- elif nome == 'chama' %}<path d="M12 3c.5 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2.2 1.2-3.6 2.2-4.6.3 1.4 1 2.3 1.8 2.8C11.6 9 11.8 6 12 3z"/>
+  {%- elif nome == 'cartao' %}<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 15h4"/>
+  {%- elif nome == 'check' %}<path d="M5 12.5l4.5 4.5L19 7.5"/>
+  {%- elif nome == 'lapis' %}<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13 7l4 4"/>
+  {%- elif nome == 'lupa' %}<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>
+  {%- elif nome == 'mais' %}<path d="M12 5v14"/><path d="M5 12h14"/>
+  {%- elif nome == 'tela-cheia' %}<path d="M4 9V4h5"/><path d="M20 9V4h-5"/><path d="M4 15v5h5"/><path d="M20 15v5h-5"/>
+  {%- elif nome == 'alerta' %}<path d="M12 4l9 16H3z"/><path d="M12 10v4"/><path d="M12 17.2v.3"/>
+  {%- elif nome == 'sino' %}<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>
+  {%- elif nome == 'mesa' %}<path d="M4 9h16"/><path d="M6 9v10"/><path d="M18 9v10"/><path d="M4 9l2-4h12l2 4"/>
+  {%- elif nome == 'recibo' %}<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6"/><path d="M9 12h6"/>
+  {%- elif nome == 'moedas' %}<ellipse cx="12" cy="7" rx="7" ry="3"/><path d="M5 7v5c0 1.7 3.1 3 7 3s7-1.3 7-3V7"/><path d="M5 12v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/>
+  {%- elif nome == 'gorjeta' %}<path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.6-7 10-7 10z"/>
+  {%- elif nome == 'relogio' %}<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>
+  {%- elif nome == 'seta' %}<path d="M5 12h14"/><path d="M13 6l6 6-6 6"/>
+  {%- elif nome == 'celular' %}<rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M11 18h2"/>
+  {%- elif nome == 'escudo' %}<path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/>
+  {%- elif nome == 'dividir' %}<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17"/><path d="M12 12l6-6"/>
+  {%- elif nome == 'trofeu' %}<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5.5a2.5 2.5 0 0 0 2.7 3.8"/><path d="M16 6h2.5a2.5 2.5 0 0 1-2.7 3.8"/><path d="M12 13v3.5"/><path d="M8.5 20h7"/><path d="M9.5 20v-1.5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1V20"/>
+  {%- elif nome == 'raio' %}<path d="M13 3L5 14h6l-1 7 8-11h-6z"/>
+  {%- endif %}
+</svg>
+{%- endmacro %}
+
+{# O que cada plano inclui (página inicial e Ajustes) #}
+{% macro itens_do_plano(chave, plano) -%}
+<ul class="lista-check">
+  <li>{{ icone('check') }}Até {{ plano.max_mesas }} mesas</li>
+  <li>{{ icone('check') }}Até {{ plano.max_usuarios }} usuários{% if chave == 'basico' %}: um em cada perfil{% endif %}</li>
+  <li>{{ icone('check') }}Comanda, cozinha, caixa e painel do dia</li>
+  <li>{{ icone('check') }}{{ incluso_na_mensalidade }}</li>
+  <li>{{ icone('check') }}{{ plano.suporte }}; resposta em {{ plano.resposta }}</li>
+</ul>
+{%- endmacro %}
+
+{% macro cartao_implantacao(classe='', estilo='') -%}
+<div class="cartao plano plano-servico {{ classe }}"{% if estilo %} style="{{ estilo }}"{% endif %}>
+  <span class="plano-faixa plano-faixa-clara">Opcional</span>
+  <h3>{{ implantacao.nome }}</h3>
+  <p class="subtitulo">Para começar com tudo pronto</p>
+  <p class="preco">{{ implantacao.preco_centavos|moeda }}<small>pagamento único</small></p>
+  <ul class="lista-check">
+    {% for item in implantacao['itens'] %}<li>{{ icone('check') }}{{ item }}</li>{% endfor %}
+  </ul>
+  <p class="plano-nota">Prazo de {{ implantacao.prazo }} depois da aprovação e do envio do cardápio, das mesas e da equipe.
+     Pagamento em 3 partes: 40% na aprovação, 30% com o cadastro conferido e 30% no aceite.</p>
+</div>
+{%- endmacro %}
+
+{% macro condicoes_da_assinatura() -%}
+<div class="condicoes">
+  <div>
+    <h3>{{ icone('cartao') }}Como funciona a cobrança</h3>
+    <p>A mensalidade começa no fim dos 14 dias grátis e é cobrada todo mês por Pix, boleto ou cartão. Sem taxa de adesão e sem fidelidade: o cancelamento vale no fim do mês pago.</p>
+  </div>
+  <div>
+    <h3>{{ icone('escudo') }}O que a assinatura dá</h3>
+    <p>Acesso ao sistema pela internet; o código-fonte não está incluído. Os dados cadastrados são do restaurante. Correção de erro não tem custo; função nova é orçada à parte, antes de começar.</p>
+  </div>
+  <div>
+    <h3>{{ icone('alerta') }}Fora desta versão</h3>
+    {% set lista = fora_do_escopo|join('; ') %}
+    <p>{{ lista[:1]|upper }}{{ lista[1:] }}.</p>
+  </div>
+</div>
+{%- endmacro %}

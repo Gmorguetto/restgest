@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% import "_figuras.html" as f %}
+{% block titulo %}Cardápio{% endblock %}
+
+{# Janela de produto: serve para criar (produto=None) e para editar #}
+{% macro janela_produto(produto=None) %}
+{% set id_janela = 'editar-' ~ produto.id if produto else 'novo-produto' %}
+<dialog class="modal" id="{{ id_janela }}" aria-labelledby="titulo-{{ id_janela }}">
+  <form method="post" action="{{ url_for('gerente.editar_produto', produto_id=produto.id) if produto else url_for('gerente.novo_produto') }}">
+    {{ m.csrf() }}
+    <div class="modal-cabecalho">
+      <div>
+        <h2 id="titulo-{{ id_janela }}">{{ 'Editar produto' if produto else 'Novo produto' }}</h2>
+        <p class="subtitulo">{{ produto.nome if produto else 'Ele aparece para o garçom assim que for salvo.' }}</p>
+      </div>
+      <button type="button" class="fechar-aviso" data-fechar aria-label="Fechar">×</button>
+    </div>
+    <div class="aviso aviso-erro modal-erro" data-erro hidden></div>
+    <div class="campo">
+      <label for="nome-{{ id_janela }}">Nome</label>
+      <input id="nome-{{ id_janela }}" name="nome" maxlength="80" value="{{ produto.nome if produto else '' }}" placeholder="Ex.: Suco de laranja" required>
+    </div>
+    <div class="form-linha">
+      <div class="campo">
+        <label for="categoria-{{ id_janela }}">Categoria</label>
+        <select id="categoria-{{ id_janela }}" name="categoria_id" data-categoria-padrao>
+          {% for opcao in grupos %}<option value="{{ opcao.categoria.id }}"{{ ' selected' if produto and opcao.categoria.id == produto.categoria_id }}>{{ opcao.categoria.nome }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="campo campo-curto">
+        <label for="preco-{{ id_janela }}">Preço (R$)</label>
+        <input id="preco-{{ id_janela }}" name="preco" inputmode="decimal" value="{{ produto.preco_centavos|campo_moeda if produto else '' }}" placeholder="12,50" required>
+      </div>
+    </div>
+    {% if produto %}
+    <label class="interruptor">
+      <input type="checkbox" name="ativo" value="sim"{{ ' checked' if produto.ativo }}>
+      Disponível para o garçom lançar
+    </label>
+    <p class="dica">O novo preço vale para as próximas vendas. Contas já lançadas mantêm o preço antigo.</p>
+    {% endif %}
+    <div class="modal-acoes">
+      <button type="button" class="botao-secundario" data-fechar>Cancelar</button>
+      <button type="submit">{{ 'Salvar alterações' if produto else 'Adicionar ao cardápio' }}</button>
+    </div>
+  </form>
+</dialog>
+{% endmacro %}
+
+{% block conteudo %}
+{% set total = grupos|map(attribute='produtos')|map('length')|sum %}
+<div class="cabecalho">
+  <div>
+    <h1>Cardápio</h1>
+    <p class="subtitulo">{{ total|plural('produto', 'produtos') }} em {{ grupos|length|plural('categoria', 'categorias') }} · {{ disponiveis|plural('disponível', 'disponíveis') }} para o garçom</p>
+  </div>
+  <div class="acoes">
+    <button type="button" class="botao-secundario" data-abrir="nova-categoria">{{ m.icone('mais') }}Nova categoria</button>
+    {% if grupos %}<button type="button" data-abrir="novo-produto">{{ m.icone('mais') }}Novo produto</button>{% endif %}
+  </div>
+</div>
+
+{% if grupos %}
+<div class="barra-filtros" data-filtro-cardapio>
+  <label class="busca">
+    {{ m.icone('lupa') }}
+    <span class="visualmente-oculto">Buscar produto</span>
+    <input type="search" placeholder="Buscar produto…" data-busca autocomplete="off">
+  </label>
+  <div class="chips" role="group" aria-label="Filtrar por categoria">
+    <button type="button" class="chip ativo" data-chip="todas" aria-pressed="true">Todas <span>{{ total }}</span></button>
+    {% for grupo in grupos %}
+    <button type="button" class="chip" data-chip="{{ grupo.categoria.id }}" aria-pressed="false">{{ grupo.categoria.nome }} <span>{{ grupo.produtos|length }}</span></button>
+    {% endfor %}
+    <button type="button" class="chip chip-alerta" data-chip="indisponiveis" aria-pressed="false">Indisponíveis <span>{{ total - disponiveis }}</span></button>
+  </div>
+</div>
+<p class="vazio" data-sem-resultado hidden>Nenhum produto encontrado. Tente outro nome ou limpe o filtro.</p>
+{% else %}
+<section class="cartao estado-vazio vazio-ilustrado">
+  {{ f.figura('cardapio-vazio') }}
+  <h2>Comece pelas categorias</h2>
+  <p class="subtitulo">Crie categorias como Pratos, Bebidas e Sobremesas. Depois cadastre os produtos com preço.</p>
+  <button type="button" data-abrir="nova-categoria">{{ m.icone('mais') }}Criar a primeira categoria</button>
+</section>
+{% endif %}
+
+{% for grupo in grupos %}
+{% set disponiveis_grupo = grupo.produtos|selectattr('ativo')|list|length %}
+<section class="cartao categoria-cardapio" data-categoria="{{ grupo.categoria.id }}">
+  <header class="categoria-topo">
+    <div class="categoria-nome">{{ f.categoria(grupo.categoria.nome|figura_categoria) }}<h2>{{ grupo.categoria.nome }}</h2></div>
+    <span class="subtitulo">{{ grupo.produtos|length|plural('produto', 'produtos') }} · {{ disponiveis_grupo|plural('disponível', 'disponíveis') }}</span>
+  </header>
+  {% if grupo.produtos %}
+  <div class="tabela-rolagem">
+    <table class="tabela tabela-cardapio">
+      <colgroup><col class="c-produto"><col class="c-preco"><col class="c-situacao"><col class="c-acao"></colgroup>
+      <thead><tr><th>Produto</th><th class="num">Preço</th><th>Disponível</th><th></th></tr></thead>
+      <tbody>
+      {% for produto in grupo.produtos %}
+        <tr id="produto-{{ produto.id }}" class="{{ '' if produto.ativo else 'apagado' }}" data-nome="{{ produto.nome }}" data-ativo="{{ 1 if produto.ativo else 0 }}">
+          <td class="nome-produto">{{ produto.nome }}</td>
+          <td class="num preco-produto">{{ produto.preco_centavos|moeda }}</td>
+          <td>
+            <form method="post" action="{{ url_for('gerente.alternar_produto', produto_id=produto.id) }}" class="form-acao">
+              {{ m.csrf() }}
+              <button type="submit" class="interruptor-botao{{ ' ligado' if produto.ativo }}" aria-pressed="{{ 'true' if produto.ativo else 'false' }}"
+                      title="{{ 'Disponível: clique para tirar do cardápio do garçom' if produto.ativo else 'Indisponível: clique para voltar ao cardápio do garçom' }}">
+                <span class="trilho" aria-hidden="true"></span>
+                <span class="rotulo">{{ 'Sim' if produto.ativo else 'Não' }}</span>
+              </button>
+            </form>
+          </td>
+          <td class="num">
+            <button type="button" class="botao-secundario botao-pequeno" data-abrir="editar-{{ produto.id }}">{{ m.icone('lapis') }}Editar</button>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% for produto in grupo.produtos %}{{ janela_produto(produto) }}{% endfor %}
+  {% else %}
+  <p class="vazio">Nenhum produto nesta categoria ainda.</p>
+  {% endif %}
+</section>
+{% endfor %}
+
+{# Janelas de cadastro #}
+{% if grupos %}{{ janela_produto() }}{% endif %}
+<dialog class="modal" id="nova-categoria" aria-labelledby="titulo-nova-categoria">
+  <form method="post" action="{{ url_for('gerente.nova_categoria') }}">
+    {{ m.csrf() }}
+    <div class="modal-cabecalho">
+      <div>
+        <h2 id="titulo-nova-categoria">Nova categoria</h2>
+        <p class="subtitulo">Agrupa os produtos no cardápio do garçom.</p>
+      </div>
+      <button type="button" class="fechar-aviso" data-fechar aria-label="Fechar">×</button>
+    </div>
+    <div class="aviso aviso-erro modal-erro" data-erro hidden></div>
+    <div class="campo">
+      <label for="nome-categoria">Nome</label>
+      <input id="nome-categoria" name="nome" maxlength="40" placeholder="Ex.: Bebidas" required>
+    </div>
+    <div class="modal-acoes">
+      <button type="button" class="botao-secundario" data-fechar>Cancelar</button>
+      <button type="submit">Criar categoria</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
